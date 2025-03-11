@@ -1,0 +1,19 @@
+#!/bin/bash
+
+kubectl config view | grep namespace | sed 's/  //g'
+printf "\nNodes:\n"
+kubectl get nodes
+printf "\nConfigMaps:\n"
+kubectl get configmaps
+printf "\nServices:\n"
+kubectl get services
+printf "\nStatefulSets:\n"
+kubectl get statefulsets
+printf "\nDeployments:\n"
+kubectl get deployments
+printf "\nPods:\n"
+kubectl get pods
+printf "\nConnector Status:\n"
+curl http://localhost:8083/connectors/postgres-sink-connector/status | json_pp
+curl http://localhost:8083/connectors/debezium-connector/status | json_pp
+ps aux | grep port-forward

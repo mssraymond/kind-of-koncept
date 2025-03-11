@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: confluent-producer
+  namespace: kafka
+spec:
+  serviceName: confluent-producer
+  replicas: 3
+  selector:
+    matchLabels:
+      app: confluent-producer
+  template:
+    metadata:
+      labels:
+        app: confluent-producer
+    spec:
+      containers:
+      - name: confluent-producer
+        image: confluent-producer:1.0.0
+        imagePullPolicy: Never
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        env:
+        - name: PRODUCER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: KAFKA_BROKER
+          value: "kafka-svc:9092"
+        - name: KAFKA_TOPIC
+          value: "loggings"
+        - name: SCHEMA_REGISTRY_URL
+          value: "http://registry-schema:8081"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: confluent-producer
+  namespace: kafka
+  labels:
+    app: confluent-producer
+spec:
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: confluent-producer

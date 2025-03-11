@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: kafka
+spec:
+  serviceName: postgres-svc
+  replicas: 3
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: "postgres:14"
+          imagePullPolicy: Never
+          args:  # Necessary for Debezium Connector
+            - "-c"
+            - "wal_level=logical"
+          # lifecycle:
+          #   postStart:
+          #     exec:
+          #       command:
+          #         - "bash"
+          #         - "-c"
+          #         - |
+          #           until pg_isready -U postgres; do
+          #             echo "Waiting for Postgres..."
+          #             sleep 2
+          #           done
+          #           psql -U postgres -c "select pg_drop_replication_slot('debezium');"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: postgres
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres
+          volumeMounts:
+            - name: data
+              mountPath: /mnt/postgres
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-svc
+  namespace: kafka
+  labels:
+    app: postgres
+spec:
+  type: NodePort
+  ports:
+    - port: 5432
+      protocol: TCP
+      targetPort: 5432
+      nodePort: 30093
+  selector:
+    app: postgres

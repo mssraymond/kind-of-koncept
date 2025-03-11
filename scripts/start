@@ -1,0 +1,123 @@
+#!/bin/bash
+
+RETRY_WAIT=10
+SHORT_WAIT=$(($RETRY_WAIT/2))
+
+wait_for_pod() {
+    local pod_name="$1"
+    while ! kubectl get pods | grep "$pod_name" | grep -E "Running|Completed" > /dev/null; do
+        echo "Awaiting $pod_name..."
+        sleep $RETRY_WAIT
+    done
+    echo "$pod_name ready!"
+}
+
+post_connector() {
+    local config_file="$1"
+    until curl -X POST -H "Content-Type: application/json" --data @"$config_file" http://localhost:8083/connectors; do
+        echo "Retry POST $config_file in $RETRY_WAIT seconds..."
+        sleep $RETRY_WAIT
+    done
+}
+
+clear
+: > log.txt
+
+# Log into Docker account, then initialize kind cluster and K8s namespace
+docker login
+kind create cluster --config manifests/0-kind-config.yml
+kubectl create namespace kafka
+kubectl config set-context --current --namespace kafka
+
+# Download to local + upload to kind cluster to get around Docker Hub throttling of unauthenticated requests (which kind is)
+docker pull doughgle/kafka-kraft
+kind load docker-image doughgle/kafka-kraft
+docker pull provectuslabs/kafka-ui
+kind load docker-image provectuslabs/kafka-ui
+docker pull confluentinc/cp-schema-registry:7.8.1
+kind load docker-image confluentinc/cp-schema-registry:7.8.1
+docker pull postgres:14
+kind load docker-image postgres:14
+docker pull dpage/pgadmin4
+kind load docker-image dpage/pgadmin4
+
+# Provision Kafka and Schema Registry resources
+kubectl apply -f manifests/1-kafka.yml
+kubectl apply -f manifests/2-schema-registry.yml
+
+# Await readiness...
+wait_for_pod "kafka"
+wait_for_pod "registry-schema"
+
+# Build and load Docker images
+docker build -t confluent-producer:1.0.0 -f producer/Dockerfile --no-cache .
+kind load docker-image confluent-producer:1.0.0
+docker build -t kafka-konnect:1.0.0 -f connect/Dockerfile --no-cache .
+kind load docker-image kafka-konnect:1.0.0
+
+# Provision Kafka UI, Kafka Connect, PostgreSQL, and pgAdmin resources
+kubectl apply -f manifests/1.2-kafka-ui.yml  # localhost:5051 via port-forward
+kubectl apply -f manifests/3-connect.yml
+kubectl apply -f manifests/4-postgres.yml
+kubectl apply -f manifests/5-pgadmin.yml  # localhost:5050 via port-forward
+
+wait_for_pod "kafka-ui"
+wait_for_pod "kafka-connect"
+wait_for_pod "postgres"
+wait_for_pod "pgadmin"
+
+# Port-forward necessary services
+./scripts/port-forward $SHORT_WAIT &
+
+# POST connector configurations
+sleep $RETRY_WAIT
+post_connector "configs/post/sink-connector.json"
+post_connector "configs/post/debezium-connector.json"
+
+# Provision producer resources
+kubectl apply -f manifests/6-producer.yml
+
+wait_for_pod "confluent-producer"
+
+while true; do
+  output=$(kubectl exec -it statefulset/postgres -- psql -U postgres -c "ALTER TABLE public.loggings REPLICA IDENTITY FULL;" 2>&1)
+  echo "$output"
+  if echo "$output" | grep -q "ALTER TABLE"; then
+    break
+  fi
+  sleep $SHORT_WAIT
+done
+
+# Helm Kubeflow Spark Operator
+helm repo add spark-operator https://kubeflow.github.io/spark-operator --force-update
+helm repo update
+helm install spark-operator spark-operator/spark-operator \
+    --namespace spark-operator --create-namespace \
+    --set "spark.jobNamespaces={kafka}" \
+    --wait  # MUST HAVE `--set "spark.jobNamespaces={kafka}"`
+
+# Give producers time to emit some events
+sleep $SHORT_WAIT
+
+# Deploy Spark Job
+docker build -t spark-pg:1.0.0 -f spark/Dockerfile --no-cache .
+kind load docker-image spark-pg:1.0.0
+kubectl apply -f manifests/7-spark.yml
+wait_for_pod "spark-python-driver"
+while true; do
+  output=$(kubectl logs spark-python-driver 2>&1)
+  if echo "$output" | grep -q "does not exist"; then
+    kubectl delete -f manifests/7-spark.yml && kubectl apply -f manifests/7-spark.yml  # Retry Spark job
+    wait_for_pod "spark-python-driver"
+  else
+    echo "$output"
+    break
+  fi
+done
+
+echo "Suited and booted. Let's do it! 🚀"
+
+### OTHER IMPORTANT COMMANDS (for debugging) ###
+# Update connector configs: curl -X PUT -H "Content-Type: application/json" --data @configs/put/<FILENAME> http://localhost:8083/connectors/<CONNECTOR_NAME>/config
+# Delete connector: curl -X DELETE http://localhost:8083/connectors/<CONNECTOR_NAME>
+# Soft & hard delete registered schema: curl -X DELETE 'http://localhost:8081/subjects/loggings-value?permanent=false' && curl -X DELETE 'http://localhost:8081/subjects/loggings-value?permanent=true'

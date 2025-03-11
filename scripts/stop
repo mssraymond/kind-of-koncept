@@ -1,0 +1,5 @@
+#!/bin/bash
+
+helm delete spark-operator -n spark-operator
+kind delete cluster
+ps aux | grep port-forward | grep -o -E '\s\d+\s' | xargs kill >> log.txt 2>&1

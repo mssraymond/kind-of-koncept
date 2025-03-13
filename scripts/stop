@@ -1,5 +1,11 @@
 #!/bin/bash
 
+curl -X DELETE http://localhost:8083/connectors/postgres-sink-connector
+curl -X DELETE http://localhost:8083/connectors/debezium-connector
+sleep 5
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "DROP PUBLICATION debezium;"
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "select pg_drop_replication_slot('debezium');"
 helm delete spark-operator -n spark-operator
 kind delete cluster
+docker image prune --force
 ps aux | grep port-forward | grep -o -E '\s\d+\s' | xargs kill >> log.txt 2>&1

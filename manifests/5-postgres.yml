@@ -16,23 +16,11 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: "postgres:14"
+          image: "debezium/postgres:17-alpine"
           imagePullPolicy: Never
           args:  # Necessary for Debezium Connector
             - "-c"
             - "wal_level=logical"
-          # lifecycle:
-          #   postStart:
-          #     exec:
-          #       command:
-          #         - "bash"
-          #         - "-c"
-          #         - |
-          #           until pg_isready -U postgres; do
-          #             echo "Waiting for Postgres..."
-          #             sleep 2
-          #           done
-          #           psql -U postgres -c "select pg_drop_replication_slot('debezium');"
           resources:
             requests:
               memory: "512Mi"

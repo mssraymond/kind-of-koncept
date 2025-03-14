@@ -1,4 +1,4 @@
-# Proof of Koncept with kind 😜
+# Kind of Koncept (aka. POC w/ kind) 😜
 
 ## Architecture
 
@@ -21,5 +21,7 @@
     - *UPLOAD* ![upload_1](imgs/img_3.png) ![upload_2](imgs/img_4.png) ![upload_3](imgs/img_5.png)
     - *QUERY* ![query](imgs/img_6.png)
 4. View Kafka UI at `localhost:5051`
-    - *TOPIC* ![topic](imgs/img_7.png)
+    - *TOPIC (JDBC Sink Connector)* ![topic](imgs/img_7.png)
+    - *TOPIC (Debezium Source Connector)* ![topic](imgs/img_8.png)
+    ***If `debezium.public.loggings` topic doens't show up or isn't ingesting more messages, run `./script/dbzm` to reboot the connector.**
 5. Shut down: `./scripts/stop`

@@ -23,7 +23,7 @@ printf "\nPublications:\n"
 kubectl exec -it statefulset/postgres -- psql -U postgres -c "SELECT * FROM pg_publication;"
 kubectl exec -it statefulset/postgres -- psql -U postgres -c "SELECT * FROM pg_publication_tables;"
 printf "\nTopics:\n"
-kubectl exec service/kafka-svc -- kafka-topics.sh --list --bootstrap-server localhost:9092
+kubectl exec service/kafka-svc -- kafka-topics.sh --list --bootstrap-server localhost:9092 | grep 'loggings'
 printf "\nMessages:\n"
 kubectl exec service/kafka-svc -- kafka-run-class.sh kafka.tools.GetOffsetShell --bootstrap-server kafka-svc:9092 --exclude-internal-topics | grep 'loggings'
 printf "\nPort Mappings:\n"

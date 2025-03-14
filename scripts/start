@@ -110,10 +110,6 @@ while true; do
   fi
 done
 
-# Update Debezium connector
-# sleep $LONG_WAIT
-# curl -X PUT -H "Content-Type: application/json" --data @configs/put/debezium-connector.json http://localhost:8083/connectors/debezium-connector/config | json_pp
-
 echo "Suited and booted. Let's do it! 🚀"
 
 ### OTHER IMPORTANT COMMANDS (for debugging) ###

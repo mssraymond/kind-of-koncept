@@ -1,0 +1,10 @@
+#!/bin/bash
+
+curl -X DELETE http://localhost:8083/connectors/debezium-connector
+sleep 5
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "DROP PUBLICATION debezium;"
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "select pg_drop_replication_slot('debezium');"
+curl -X POST -H 'Content-Type: application/json' --data @configs/post/debezium-connector.json http://localhost:8083/connectors | json_pp
+sleep 5
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "CREATE PUBLICATION debezium FOR ALL TABLES WITH (publish = 'insert, update, delete');"
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "SELECT pg_create_logical_replication_slot('debezium', 'pgoutput');"

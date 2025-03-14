@@ -26,7 +26,7 @@
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "key.converter.schemas.enable": "false",
     "value.converter.schemas.enable": "false",
-    "snapshot.mode": "initial",
+    "snapshot.mode": "always",
     "key.enforce.uniqueness": "false",
     "offsets.storage.topic": "connect-offsets"
 }

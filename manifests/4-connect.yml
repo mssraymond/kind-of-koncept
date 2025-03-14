@@ -19,11 +19,11 @@ spec:
           imagePullPolicy: Never
           resources:
             requests:
-              memory: "8192Mi"
-              cpu: "1000m"
+              memory: "4Gi"
+              cpu: "2"
             limits:
-              memory: "8192Mi"
-              cpu: "1000m"
+              memory: "6Gi"
+              cpu: "4"
           env:
             - name: CONNECT_BOOTSTRAP_SERVERS
               value: "kafka-svc:9092"
@@ -36,11 +36,11 @@ spec:
             - name: CONNECT_STATUS_STORAGE_TOPIC
               value: "connect-statuses"
             - name: CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR
-              value: "3"
+              value: "2"
             - name: CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR
-              value: "3"
+              value: "2"
             - name: CONNECT_STATUS_STORAGE_REPLICATION_FACTOR
-              value: "3"
+              value: "2"
             - name: CONNECT_KEY_CONVERTER
               value: "org.apache.kafka.connect.storage.StringConverter"
             - name: CONNECT_VALUE_CONVERTER

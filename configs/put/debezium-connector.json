@@ -2,7 +2,7 @@
     "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
     "tasks.max": "1",
     "topic.creation.enable": "true",
-    "topic.creation.default.replication.factor": "3",
+    "topic.creation.default.replication.factor": "2",
     "topic.creation.default.partitions": "1",
     "min.insync.replicas": "1",
     "database.history.kafka.bootstrap.servers": "kafka-svc:9092",
@@ -26,5 +26,7 @@
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "key.converter.schemas.enable": "false",
     "value.converter.schemas.enable": "false",
-    "snapshot.mode": "always"
+    "snapshot.mode": "initial",
+    "key.enforce.uniqueness": "false",
+    "offsets.storage.topic": "connect-offsets"
 }

@@ -5,7 +5,7 @@ metadata:
   namespace: kafka
 spec:
   serviceName: postgres-svc
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: postgres
@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: "debezium/postgres:17-alpine"
+          image: "debezium/postgres:15"
           imagePullPolicy: Never
           args:  # Necessary for Debezium Connector
             - "-c"

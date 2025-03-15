@@ -9,9 +9,8 @@ spec:
   mode: cluster
   image: python-spark:1.0.0
   imagePullPolicy: IfNotPresent
-  # mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
   mainApplicationFile: local:///app/spark.py
-  sparkVersion: 3.5.1
+  sparkVersion: 3.5.5
   driver:
     cores: 1
     memory: 512m

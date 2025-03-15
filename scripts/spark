@@ -4,7 +4,7 @@ source .env
 WAIT_TIME=$(($WAIT_TIME/2))
 docker build -t python-spark:1.0.0 -f python/spark.Dockerfile --no-cache .
 kind load docker-image python-spark:1.0.0
-kubectl delete -f manifests/9-spark.yml
+kubectl delete -f manifests/9-spark.yml 2> /dev/null
 kubectl apply -f manifests/9-spark.yml
 sleep $WAIT_TIME
 kubectl logs -f python-spark-driver

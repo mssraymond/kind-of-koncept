@@ -3,10 +3,11 @@ from pyspark.sql import SparkSession
 
 def spark_streaming(host, topic):
     scala_version = "2.12"
-    spark_version = "3.5.1"
+    spark_version = "3.5.5"
+    kafka_version = "3.1.0"
     packages = [
         f"org.apache.spark:spark-sql-kafka-0-10_{scala_version}:{spark_version}",
-        "org.apache.kafka:kafka-clients:3.2.1",
+        f"org.apache.kafka:kafka-clients:{kafka_version}",
     ]
     # Create a SparkSession
     spark = (

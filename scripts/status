@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source .env
+echo "Wait time set to $WAIT_TIME seconds"
 kubectl config view | grep namespace | sed 's/  //g'
 printf "\nNodes:\n"
 kubectl get nodes

@@ -1,8 +1,11 @@
 #!/bin/bash
 
+source .env
+WAIT_TIME=$(($WAIT_TIME/2))
 curl -X DELETE http://localhost:8083/connectors/postgres-sink-connector
 curl -X DELETE http://localhost:8083/connectors/debezium-connector
-sleep 5
+echo "Pause for $WAIT_TIME seconds..."
+sleep $WAIT_TIME
 kubectl exec -it statefulset/postgres -- psql -U postgres -c "DROP PUBLICATION debezium;"
 kubectl exec -it statefulset/postgres -- psql -U postgres -c "select pg_drop_replication_slot('debezium');"
 helm delete spark-operator -n spark-operator

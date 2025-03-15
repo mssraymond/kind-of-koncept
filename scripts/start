@@ -1,14 +1,14 @@
 #!/bin/bash
 
-RETRY_WAIT=10
-SHORT_WAIT=$(($RETRY_WAIT/2))
-LONG_WAIT=$(($RETRY_WAIT*2))
+source .env
+SHORT_WAIT=$(($WAIT_TIME/2))
+LONG_WAIT=$(($WAIT_TIME*2))
 
 wait_for_pod() {
     local pod_name="$1"
     while ! kubectl get pods | grep "$pod_name" | grep -E "Running|Completed" > /dev/null; do
         echo "Awaiting $pod_name..."
-        sleep $RETRY_WAIT
+        sleep $SHORT_WAIT
     done
     echo "$pod_name ready!"
 }
@@ -16,8 +16,8 @@ wait_for_pod() {
 post_connector() {
     local config_file="$1"
     until curl -X POST -H "Content-Type: application/json" --data @"$config_file" "http://localhost:8083/connectors"; do
-        echo "Retry POST $config_file in $RETRY_WAIT seconds..."
-        sleep $RETRY_WAIT
+        echo "Retry POST $config_file in $SHORT_WAIT seconds..."
+        sleep $SHORT_WAIT
     done
     echo -e "\n"
 }
@@ -69,7 +69,7 @@ wait_for_pod "pgadmin"
 ./scripts/port-forward $SHORT_WAIT &
 
 # POST connector configurations
-sleep $RETRY_WAIT
+sleep $SHORT_WAIT
 post_connector "configs/post/sink-connector.json"
 post_connector "configs/post/debezium-connector.json"
 

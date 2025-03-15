@@ -78,6 +78,8 @@ kubectl apply -f manifests/7-producer.yml
 wait_for_pod "confluent-producer"
 
 # Create publication and replication slot, and alter table replica identity
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "GRANT pg_read_all_data TO postgres;"
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "GRANT pg_write_all_data TO postgres;"
 kubectl exec -it statefulset/postgres -- psql -U postgres -c "ALTER USER postgres REPLICATION;"
 kubectl exec -it statefulset/postgres -- psql -U postgres -c "CREATE PUBLICATION debezium FOR ALL TABLES WITH (publish = 'insert, update, delete');"
 kubectl exec -it statefulset/postgres -- psql -U postgres -c "UPDATE pg_publication SET puballtables=true;"

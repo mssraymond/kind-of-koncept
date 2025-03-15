@@ -92,18 +92,18 @@ helm install spark-operator spark-operator/spark-operator \
     --set "spark.jobNamespaces={kafka}" \
     --wait  # MUST HAVE `--set "spark.jobNamespaces={kafka}"`
 
-# Deploy Python application (Spark Job)
-docker build -t spark-pg:1.0.0 -f spark/Dockerfile --no-cache .
-kind load docker-image spark-pg:1.0.0
-kubectl apply -f manifests/8-spark.yml
-wait_for_pod "spark-python-driver"
+# Deploy Python application (query Postgres)
+docker build -t python-pg:1.0.0 -f python/pg.Dockerfile --no-cache .
+kind load docker-image python-pg:1.0.0
+kubectl apply -f manifests/8-pypg.yml
+wait_for_pod "python-pg-driver"
 
 # Ensure connectivity
 while true; do
-  output=$(kubectl logs spark-python-driver 2>&1)
+  output=$(kubectl logs python-pg-driver 2>&1)
   if echo "$output" | grep -q "does not exist"; then
-    kubectl delete -f manifests/8-spark.yml && kubectl apply -f manifests/8-spark.yml  # Retry Spark job
-    wait_for_pod "spark-python-driver"
+    kubectl delete -f manifests/8-pypg.yml && kubectl apply -f manifests/8-pypg.yml  # Retry Python Postgres job
+    wait_for_pod "python-pg-driver"
   else
     echo "$output"
     break

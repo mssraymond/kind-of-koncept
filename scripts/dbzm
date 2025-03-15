@@ -3,7 +3,7 @@
 source .env
 WAIT_TIME=$(($WAIT_TIME/2))
 curl -X DELETE http://localhost:8083/connectors/debezium-connector
-kubectl exec service/kafka-svc -- kafka-topics.sh --bootstrap-server kafka-svc:9092 --delete --topic debezium.public.loggings
+kubectl exec service/kafka-svc -- kafka-topics.sh --bootstrap-server kafka-svc:9092 --delete --topic debezium.public.loggings 2> /dev/null
 echo "Pause for $WAIT_TIME seconds..."
 sleep $WAIT_TIME
 kubectl exec -it statefulset/postgres -- psql -U postgres -c "DROP PUBLICATION debezium;"
@@ -11,7 +11,7 @@ kubectl exec -it statefulset/postgres -- psql -U postgres -c "select pg_drop_rep
 curl -X POST -H 'Content-Type: application/json' --data @configs/post/debezium-connector.json http://localhost:8083/connectors | json_pp
 echo "Pause for another $WAIT_TIME seconds..."
 sleep $WAIT_TIME
-kubectl exec -it statefulset/postgres -- psql -U postgres -c "CREATE PUBLICATION debezium FOR ALL TABLES WITH (publish = 'insert, update, delete');"
-kubectl exec -it statefulset/postgres -- psql -U postgres -c "SELECT pg_create_logical_replication_slot('debezium', 'pgoutput');"
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "CREATE PUBLICATION debezium FOR ALL TABLES WITH (publish = 'insert, update, delete');" 2> /dev/null
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "SELECT pg_create_logical_replication_slot('debezium', 'pgoutput');" 2> /dev/null
 sleep $WAIT_TIME
 curl -X PUT -H "Content-Type: application/json" --data @configs/put/debezium-connector.json http://localhost:8083/connectors/debezium-connector/config | json_pp

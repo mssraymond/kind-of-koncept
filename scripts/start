@@ -85,6 +85,7 @@ kubectl exec -it statefulset/postgres -- psql -U postgres -c "CREATE PUBLICATION
 kubectl exec -it statefulset/postgres -- psql -U postgres -c "UPDATE pg_publication SET puballtables=true;"
 kubectl exec -it statefulset/postgres -- psql -U postgres -c "SELECT pg_create_logical_replication_slot('debezium', 'pgoutput');"
 kubectl exec -it statefulset/postgres -- psql -U postgres -c "ALTER TABLE public.loggings REPLICA IDENTITY FULL;"
+curl -X PUT -H "Content-Type: application/json" --data @configs/put/debezium-connector.json http://localhost:8083/connectors/debezium-connector/config | json_pp
 
 # Helm Kubeflow Spark Operator
 helm repo add spark-operator https://kubeflow.github.io/spark-operator --force-update

@@ -9,9 +9,8 @@ spec:
   mode: cluster
   image: python-pg:1.0.0
   imagePullPolicy: IfNotPresent
-  # mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
-  mainApplicationFile: local:///app/pg.py
-  sparkVersion: 3.5.1
+  mainApplicationFile: local:///app/postgres.py
+  sparkVersion: 3.5.5
   driver:
     cores: 1
     memory: 512m

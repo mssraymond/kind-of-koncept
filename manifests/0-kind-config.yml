@@ -3,7 +3,7 @@ kind: Cluster
 nodes:
 - role: control-plane
   extraMounts:
-    - hostPath: python
+    - hostPath: spark
       containerPath: /src
   extraPortMappings:
   - containerPort: 30092
@@ -12,13 +12,13 @@ nodes:
     protocol: tcp
 - role: worker
   extraMounts:
-    - hostPath: python
+    - hostPath: spark
       containerPath: /src
 - role: worker
   extraMounts:
-    - hostPath: python
+    - hostPath: spark
       containerPath: /src
 - role: worker
   extraMounts:
-    - hostPath: python
+    - hostPath: spark
       containerPath: /src

@@ -96,7 +96,7 @@ helm install spark-operator spark-operator/spark-operator \
     --wait  # MUST HAVE `--set "spark.jobNamespaces={kafka}"`
 
 # Deploy Python application (query Postgres)
-docker build -t python-pg:1.0.0 -f python/pg.Dockerfile --no-cache .
+docker build -t python-pg:1.0.0 -f postgres/Dockerfile --no-cache .
 kind load docker-image python-pg:1.0.0
 kubectl apply -f manifests/8-pypg.yml
 wait_for_pod "python-pg-driver"

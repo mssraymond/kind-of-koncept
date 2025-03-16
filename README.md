@@ -2,9 +2,7 @@
 
 ## Architecture
 
-[--- Python ---] --> [--- Kafka ---] --> [--- JDBC Sink Connector] --> [--- PostgreSQL ---] --> [--- Debezium Source Connector ---] --> [--- Kafka ---] [--- Spark ---]
-
-[------------------------------------------------------------------------------ Kubernetes ---------------------------------------------------------------------------]
+![architecture](imgs/img_10.png)
 
 ## Prerequisites
 
@@ -24,4 +22,6 @@
     - *TOPIC (JDBC Sink Connector)* ![topic](imgs/img_7.png)
     - *TOPIC (Debezium Source Connector)* ![topic](imgs/img_8.png)
     ***If `debezium.public.loggings` topic doens't show up or isn't ingesting more messages, run `./script/dbzm` to reboot the connector.**
-5. Shut down: `./scripts/stop`
+5. Spark Structured Streaming: `./script/spark`
+    - *Spark Structured Streaming (Kubeflow Spark Operator)* ![stream](imgs/img_9.png)
+6. Shut down: `./scripts/stop`

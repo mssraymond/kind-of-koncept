@@ -11,12 +11,13 @@ def spark_streaming(host, topic, port):
         f"org.apache.kafka:kafka-clients:{kafka_version}",
     ]
     # Create a SparkSession
-    spark = (
-        SparkSession.builder.master("local[*]")
-        .appName("KafkaToSpark")
-        .config("spark.jars.packages", ",".join(packages))
-        .getOrCreate()
-    )
+    # spark = (
+    #     SparkSession.builder.master("local[*]")
+    #     .appName("KafkaToSpark")
+    #     .config("spark.jars.packages", ",".join(packages))
+    #     .getOrCreate()
+    # )
+    spark = SparkSession.getActiveSession() or SparkSession.builder.getOrCreate()
 
     # Read data from Kafka
     df = (
@@ -30,7 +31,9 @@ def spark_streaming(host, topic, port):
     df = df.selectExpr("CAST(value AS STRING) AS message")
 
     # Print the messages to the console
-    df.writeStream.outputMode("append").format("console").start().awaitTermination()
+    df.writeStream.outputMode("append").format("console").option(
+        "truncate", False
+    ).start().awaitTermination()
 
 
 if __name__ == "__main__":

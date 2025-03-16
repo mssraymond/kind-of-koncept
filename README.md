@@ -1,10 +1,8 @@
-# Proof of Koncept with kind 😜
+# Kind of Koncept (aka. POC w/ kind) 😜
 
 ## Architecture
 
-[--- Python ---] --> [--- Kafka ---] --> [--- JDBC Sink Connector] --> [--- PostgreSQL ---] --> [--- Debezium Source Connector ---] --> [--- Kafka ---] [--- Spark ---]
-
-[------------------------------------------------------------------------------ Kubernetes ---------------------------------------------------------------------------]
+![architecture](imgs/img_10.png)
 
 ## Prerequisites
 
@@ -21,5 +19,9 @@
     - *UPLOAD* ![upload_1](imgs/img_3.png) ![upload_2](imgs/img_4.png) ![upload_3](imgs/img_5.png)
     - *QUERY* ![query](imgs/img_6.png)
 4. View Kafka UI at `localhost:5051`
-    - *TOPIC* ![topic](imgs/img_7.png)
-5. Shut down: `./scripts/stop`
+    - *TOPIC (JDBC Sink Connector)* ![topic](imgs/img_7.png)
+    - *TOPIC (Debezium Source Connector)* ![topic](imgs/img_8.png)
+    ***If `debezium.public.loggings` topic doens't show up or isn't ingesting more messages, run `./script/dbzm` to reboot the connector.**
+5. Spark Structured Streaming: `./script/spark`
+    - *Spark Structured Streaming (Kubeflow Spark Operator)* ![stream](imgs/img_9.png)
+6. Shut down: `./scripts/stop`

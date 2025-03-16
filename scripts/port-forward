@@ -1,12 +1,12 @@
 #!/bin/bash
 
-RETRY_WAIT=$(($1/2))
+WAIT_TIME=$(($1/2))
 while true; do
     echo "$(date): Starting port forwards" >> log.txt 2>&1
     kubectl port-forward svc/kafka-connect 8083:8083 >> log.txt 2>&1 & \
     kubectl port-forward svc/registry-schema 8081:8081 >> log.txt 2>&1 & \
     kubectl port-forward svc/pgadmin 5050:80 >> log.txt 2>&1 & \
     kubectl port-forward svc/kafka-ui 5051:8080 >> log.txt 2>&1 &
-    echo "$(date): Sleep for $RETRY_WAIT seconds" >> log.txt 2>&1
-    sleep $RETRY_WAIT
+    echo "$(date): Sleep for $WAIT_TIME seconds" >> log.txt 2>&1
+    sleep $WAIT_TIME
 done

@@ -1,44 +1,25 @@
-import psycopg2
+from pyspark.sql import SparkSession
 
 
-def query_table(host, database, user, password, schema, table_name):
-    """
-    Queries the specified table in a PostgreSQL database. Returns list of tuples, where each tuple represents a row from the table.
-    Returns None if an error occurs.
-    """
-    try:
-        conn = psycopg2.connect(
-            host=host,
-            database=database,
-            user=user,
-            password=password,
-        )
-        cur = conn.cursor()
+def spark_streaming(host, topic, port):
+    spark = SparkSession.getActiveSession() or SparkSession.builder.getOrCreate()
 
-        cur.execute(f"SELECT * FROM {schema}.{table_name};")
+    df = (
+        spark.readStream.format("kafka")
+        .option("kafka.bootstrap.servers", f"{host}:{port}")
+        .option("subscribe", topic)
+        .load()
+    )
 
-        rows = cur.fetchall()
+    df = df.selectExpr("CAST(value AS STRING) AS message")
 
-        cur.close()
-        conn.close()
-
-        return rows
-
-    except psycopg2.Error as e:
-        print(f"Error connecting to or querying the database: {e}")
-        return None
+    df.writeStream.outputMode("append").format("console").option(
+        "truncate", False
+    ).start().awaitTermination()
 
 
 if __name__ == "__main__":
-    host = "postgres-svc"
-    database = "postgres"
-    user = "postgres"
-    password = "postgres"
-    schema = "public"
-    table_name = "loggings"
-
-    results = query_table(host, database, user, password, schema, table_name)
-
-    if results is not None:
-        for row in results:
-            print(row)
+    kafka_host = "kafka-svc"
+    kafka_topic = "debezium.public.loggings"
+    port = "9092"
+    spark_streaming(kafka_host, kafka_topic, port)

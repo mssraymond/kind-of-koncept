@@ -1,23 +1,25 @@
 #!/bin/bash
 
-RETRY_WAIT=10
-SHORT_WAIT=$(($RETRY_WAIT/2))
+source .env
+SHORT_WAIT=$(($WAIT_TIME/2))
+LONG_WAIT=$(($WAIT_TIME*2))
 
 wait_for_pod() {
     local pod_name="$1"
     while ! kubectl get pods | grep "$pod_name" | grep -E "Running|Completed" > /dev/null; do
         echo "Awaiting $pod_name..."
-        sleep $RETRY_WAIT
+        sleep $SHORT_WAIT
     done
     echo "$pod_name ready!"
 }
 
 post_connector() {
     local config_file="$1"
-    until curl -X POST -H "Content-Type: application/json" --data @"$config_file" http://localhost:8083/connectors; do
-        echo "Retry POST $config_file in $RETRY_WAIT seconds..."
-        sleep $RETRY_WAIT
+    until curl -X POST -H "Content-Type: application/json" --data @"$config_file" "http://localhost:8083/connectors"; do
+        echo "Retry POST $config_file in $SHORT_WAIT seconds..."
+        sleep $SHORT_WAIT
     done
+    echo -e "\n"
 }
 
 clear
@@ -36,16 +38,14 @@ docker pull provectuslabs/kafka-ui
 kind load docker-image provectuslabs/kafka-ui
 docker pull confluentinc/cp-schema-registry:7.8.1
 kind load docker-image confluentinc/cp-schema-registry:7.8.1
-docker pull postgres:14
-kind load docker-image postgres:14
+docker pull debezium/postgres:15
+kind load docker-image debezium/postgres:15
 docker pull dpage/pgadmin4
 kind load docker-image dpage/pgadmin4
 
-# Provision Kafka and Schema Registry resources
+# Provision and await Kafka and Schema Registry resources
 kubectl apply -f manifests/1-kafka.yml
 kubectl apply -f manifests/2-schema-registry.yml
-
-# Await readiness...
 wait_for_pod "kafka"
 wait_for_pod "registry-schema"
 
@@ -55,12 +55,11 @@ kind load docker-image confluent-producer:1.0.0
 docker build -t kafka-konnect:1.0.0 -f connect/Dockerfile --no-cache .
 kind load docker-image kafka-konnect:1.0.0
 
-# Provision Kafka UI, Kafka Connect, PostgreSQL, and pgAdmin resources
-kubectl apply -f manifests/1.2-kafka-ui.yml  # localhost:5051 via port-forward
-kubectl apply -f manifests/3-connect.yml
-kubectl apply -f manifests/4-postgres.yml
-kubectl apply -f manifests/5-pgadmin.yml  # localhost:5050 via port-forward
-
+# Provision and await Kafka UI, Kafka Connect, PostgreSQL, and pgAdmin resources
+kubectl apply -f manifests/3-kafka-ui.yml  # localhost:5051 via port-forward
+kubectl apply -f manifests/4-connect.yml
+kubectl apply -f manifests/5-postgres.yml
+kubectl apply -f manifests/6-pgadmin.yml  # localhost:5050 via port-forward
 wait_for_pod "kafka-ui"
 wait_for_pod "kafka-connect"
 wait_for_pod "postgres"
@@ -70,23 +69,23 @@ wait_for_pod "pgadmin"
 ./scripts/port-forward $SHORT_WAIT &
 
 # POST connector configurations
-sleep $RETRY_WAIT
+sleep $SHORT_WAIT
 post_connector "configs/post/sink-connector.json"
 post_connector "configs/post/debezium-connector.json"
 
-# Provision producer resources
-kubectl apply -f manifests/6-producer.yml
-
+# Provision and await producer resources
+kubectl apply -f manifests/7-producer.yml
 wait_for_pod "confluent-producer"
 
-while true; do
-  output=$(kubectl exec -it statefulset/postgres -- psql -U postgres -c "ALTER TABLE public.loggings REPLICA IDENTITY FULL;" 2>&1)
-  echo "$output"
-  if echo "$output" | grep -q "ALTER TABLE"; then
-    break
-  fi
-  sleep $SHORT_WAIT
-done
+# Create publication and replication slot, and alter table replica identity
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "GRANT pg_read_all_data TO postgres;"
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "GRANT pg_write_all_data TO postgres;"
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "ALTER USER postgres REPLICATION;"
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "CREATE PUBLICATION debezium FOR ALL TABLES WITH (publish = 'insert, update, delete');"
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "UPDATE pg_publication SET puballtables=true;"
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "SELECT pg_create_logical_replication_slot('debezium', 'pgoutput');"
+kubectl exec -it statefulset/postgres -- psql -U postgres -c "ALTER TABLE public.loggings REPLICA IDENTITY FULL;"
+curl -X PUT -H "Content-Type: application/json" --data @configs/put/debezium-connector.json http://localhost:8083/connectors/debezium-connector/config | json_pp
 
 # Helm Kubeflow Spark Operator
 helm repo add spark-operator https://kubeflow.github.io/spark-operator --force-update
@@ -96,19 +95,18 @@ helm install spark-operator spark-operator/spark-operator \
     --set "spark.jobNamespaces={kafka}" \
     --wait  # MUST HAVE `--set "spark.jobNamespaces={kafka}"`
 
-# Give producers time to emit some events
-sleep $SHORT_WAIT
+# Deploy Python application (query Postgres)
+docker build -t python-pg:1.0.0 -f postgres/Dockerfile --no-cache .
+kind load docker-image python-pg:1.0.0
+kubectl apply -f manifests/8-pypg.yml
+wait_for_pod "python-pg-driver"
 
-# Deploy Spark Job
-docker build -t spark-pg:1.0.0 -f spark/Dockerfile --no-cache .
-kind load docker-image spark-pg:1.0.0
-kubectl apply -f manifests/7-spark.yml
-wait_for_pod "spark-python-driver"
+# Ensure connectivity
 while true; do
-  output=$(kubectl logs spark-python-driver 2>&1)
+  output=$(kubectl logs python-pg-driver 2>&1)
   if echo "$output" | grep -q "does not exist"; then
-    kubectl delete -f manifests/7-spark.yml && kubectl apply -f manifests/7-spark.yml  # Retry Spark job
-    wait_for_pod "spark-python-driver"
+    kubectl delete -f manifests/8-pypg.yml && kubectl apply -f manifests/8-pypg.yml  # Retry Python Postgres job
+    wait_for_pod "python-pg-driver"
   else
     echo "$output"
     break
@@ -121,3 +119,6 @@ echo "Suited and booted. Let's do it! 🚀"
 # Update connector configs: curl -X PUT -H "Content-Type: application/json" --data @configs/put/<FILENAME> http://localhost:8083/connectors/<CONNECTOR_NAME>/config
 # Delete connector: curl -X DELETE http://localhost:8083/connectors/<CONNECTOR_NAME>
 # Soft & hard delete registered schema: curl -X DELETE 'http://localhost:8081/subjects/loggings-value?permanent=false' && curl -X DELETE 'http://localhost:8081/subjects/loggings-value?permanent=true'
+# Create replication slot: kubectl exec -it statefulset/postgres -- psql -U postgres -c "SELECT pg_create_logical_replication_slot('debezium', 'pgoutput');"
+# Delete replication slot: kubectl exec -it statefulset/postgres -- psql -U postgres -c "select pg_drop_replication_slot('debezium');"
+# List Kafka topics: kubectl exec statefulset/kafka -- kafka-topics.sh --list --bootstrap-server localhost:9092

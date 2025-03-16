@@ -1,0 +1,51 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: python-spark
+  namespace: kafka
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: spark:3.5.5
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///src/spark.py
+  sparkVersion: 3.5.5
+  sparkConf:
+    spark.jars.packages: "org.apache.spark:spark-streaming-kafka-0-10_2.12:3.5.5,org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5,org.apache.kafka:kafka-clients:3.1.0"
+    spark.driver.extraJavaOptions: "-Divy.cache.dir=/tmp/.ivy2 -Divy.home=/tmp/.ivy2"
+    spark.executor.extraJavaOptions: "-Divy.cache.dir=/tmp/.ivy2 -Divy.home=/tmp/.ivy2"
+    spark.jars.ivy: "/tmp/.ivy2"
+  deps:
+    repositories:
+      - https://repo1.maven.org/maven2
+    packages:
+      - org.apache.spark:spark-streaming-kafka-0-10_2.12:3.5.5
+      - org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5
+      - org.apache.kafka:kafka-clients:3.1.0
+  volumes:
+    - name: "src"
+      hostPath:
+        path: "/src"
+        type: Directory
+    - name: "ivy-cache"
+      emptyDir: {}
+  driver:
+    cores: 1
+    memory: 512m
+    serviceAccount: spark-operator-spark
+    volumeMounts:
+      - name: "src"
+        mountPath: "/src"
+      - name: "ivy-cache"
+        mountPath: "/tmp/.ivy2"
+  executor:
+    instances: 1
+    cores: 1
+    memory: 512m
+    serviceAccount: spark-operator-spark
+    volumeMounts:
+      - name: "src"
+        mountPath: "/src"
+      - name: "ivy-cache"
+        mountPath: "/tmp/.ivy2"

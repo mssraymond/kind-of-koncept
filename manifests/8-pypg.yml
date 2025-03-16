@@ -1,18 +1,16 @@
 apiVersion: sparkoperator.k8s.io/v1beta2
 kind: SparkApplication
 metadata:
-  name: spark-python
+  name: python-pg
   namespace: kafka
 spec:
   type: Python
   pythonVersion: "3"
   mode: cluster
-  # image: spark:3.5.3
-  image: spark-pg:1.0.0
+  image: python-pg:1.0.0
   imagePullPolicy: IfNotPresent
-  # mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
-  mainApplicationFile: local:///app/spark.py
-  sparkVersion: 3.5.3
+  mainApplicationFile: local:///app/postgres.py
+  sparkVersion: 3.5.5
   driver:
     cores: 1
     memory: 512m
